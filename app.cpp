@@ -36,15 +36,24 @@ static bool startsWith(const std::string& str, const std::string& prefix)
     return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
 }
 
+typedef std::vector<std::string> CommandLineStringArgs;
+
 int main(int argc, char *argv[]){
 
-    std::string path = "C:\\Users\\SJ9957\\Documents\\Polarizer";
+    if(argc != 3){
+        std::cout << "Not enough arguments. Required 2 provided " << argc - 1 << std::endl;
+        return -1; 
+    }
+
+    CommandLineStringArgs cmdlineStringArgs(&argv[0], &argv[0 + argc]);
+
+    std::string path = cmdlineStringArgs[1];
 
     std::vector<std::string> v;
     read_directory(path, v);
 
     // Template feature extraction
-    std::string template_filename = "Keurig.jpg";
+    std::string template_filename = cmdlineStringArgs[2];
     
     Mat img_1 = imread(template_filename, IMREAD_GRAYSCALE);   // Read the file
     
@@ -81,42 +90,35 @@ int main(int argc, char *argv[]){
 
             detector->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2 );
 
-            std::vector< DMatch > matches;
-            matcher.match( descriptors_1, descriptors_2, matches );
+            std::vector<std::vector< DMatch >> matches;
+            matcher.knnMatch( descriptors_1, descriptors_2, matches, 2 );
             
             std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
-            
-            double max_dist = 0; double min_dist = 100;
-            //-- Quick calculation of max and min distances between keypoints
-            for( int i = 0; i < descriptors_1.rows; i++ )
-            { double dist = matches[i].distance;
-                if( dist < min_dist ) min_dist = dist;
-                if( dist > max_dist ) max_dist = dist;
+
+            std::vector<cv::DMatch> good_matches;
+            for (int i = 0; i < matches.size(); ++i)
+            {
+                const float ratio = 0.7; // As in Lowe's paper; can be tuned
+                if(matches[i].size() < 2)
+                    continue;
+                if (matches[i][0].distance < ratio * matches[i][1].distance)
+                {
+                    good_matches.push_back(matches[i][0]);
+                }
             }
-            printf("-- Max dist : %f \n", max_dist );
-            printf("-- Min dist : %f \n", min_dist );
-            //-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
-            //-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
-            //-- small)
-            //-- PS.- radiusMatch can also be used here.
-            std::vector< DMatch > good_matches;
-            for( int i = 0; i < descriptors_1.rows; i++ )
-            { if( matches[i].distance <= 1.5*min_dist)
-                { good_matches.push_back( matches[i]); }
-            }
-            //-- Draw only "good" matches
+
             Mat img_matches;
             try{
                 drawMatches( img_1, keypoints_1, img_2, keypoints_2,
                             good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
                             std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+                //-- Show detected matches
+                imshow( "Good Matches", img_matches );
+                for( int i = 0; i < (int)good_matches.size(); i++ )
+                { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
             }catch(...){
                 imshow( "Good Matches", img_2 );
             }
-            //-- Show detected matches
-            imshow( "Good Matches", img_matches );
-            for( int i = 0; i < (int)good_matches.size(); i++ )
-            { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
 
             waitKey(0);                                          // Wait for a keystroke in the window
         }
