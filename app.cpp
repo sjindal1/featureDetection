@@ -79,51 +79,53 @@ int main(int argc, char *argv[]){
     #endif
 
     for(std::string p:v){
-        if(endsWith(p, ".bmp")){
-            std::string test_filename = path + "\\" + p;
-            Mat img_2 = imread(test_filename, IMREAD_GRAYSCALE);   // Read the file
-
-            std::vector<KeyPoint> keypoints_2;
-            Mat descriptors_2;
-            std::clock_t    start;
-            start = std::clock();
-
-            detector->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2 );
-
-            std::vector<std::vector< DMatch >> matches;
-            matcher.knnMatch( descriptors_1, descriptors_2, matches, 2 );
-            
-            std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
-
-            std::vector<cv::DMatch> good_matches;
-            for (int i = 0; i < matches.size(); ++i)
-            {
-                const float ratio = 0.7; // As in Lowe's paper; can be tuned
-                if(matches[i].size() < 2)
-                    continue;
-                if (matches[i][0].distance < ratio * matches[i][1].distance)
-                {
-                    good_matches.push_back(matches[i][0]);
-                }
-            }
-
-            Mat img_matches;
-            try{
-                drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-                            good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                            std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-                //-- Show detected matches
-                imshow( "Good Matches", img_matches );
-                for( int i = 0; i < (int)good_matches.size(); i++ )
-                { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
-            }catch(...){
-                imshow( "Good Matches", img_2 );
-            }
-
-            waitKey(0);                                          // Wait for a keystroke in the window
-        }
-        else
+        if(!endsWith(p, ".bmp"))
             continue;
+        
+        std::string test_filename = path + "\\" + p;
+        Mat img_2 = imread(test_filename, IMREAD_GRAYSCALE);   // Read the file
+
+        std::vector<KeyPoint> keypoints_2;
+        Mat descriptors_2;
+        std::clock_t    start;
+        start = std::clock();
+
+        detector->detectAndCompute( img_2, Mat(), keypoints_2, descriptors_2 );
+
+        std::vector<std::vector< DMatch >> matches;
+        matcher.knnMatch( descriptors_1, descriptors_2, matches, 2 );
+        
+        std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+
+        std::vector<cv::DMatch> good_matches;
+        for (int i = 0; i < matches.size(); ++i)
+        {
+            const float ratio = 0.7; // As in Lowe's paper; can be tuned
+            if(matches[i].size() < 2)
+                continue;
+            if (matches[i][0].distance < ratio * matches[i][1].distance)
+            {
+                good_matches.push_back(matches[i][0]);
+            }
+        }
+
+        Mat img_matches;
+        try{
+            drawMatches( img_1, keypoints_1, img_2, keypoints_2,
+                        good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                        std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+            //-- Show detected matches
+            imshow( "Good Matches", img_matches );
+            // for( int i = 0; i < (int)good_matches.size(); i++ )
+            // { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
+        }catch(...){
+            imshow( "Good Matches", img_2 );
+        }
+
+        char key = waitKey(0);
+        if (key == 'b'){
+            break;
+        }
     }
 
     return 0;
