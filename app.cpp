@@ -40,32 +40,34 @@ static bool startsWith(const std::string &str, const std::string &prefix)
 
 typedef std::vector<std::string> CommandLineStringArgs;
 
-void findParams(std::vector<cv::Point2f> &obj, std::vector<cv::Point2f> &scene, float *mat_object) {
+void findParams(std::vector<cv::Point2f> &obj, std::vector<cv::Point2f> &scene, float *mat_object)
+{
     float a1, a2, a3, a4;
     int n = obj.size();
     float x_avg = 0, y_avg = 0, x_d_avg = 0, y_d_avg = 0, x_t_x = 0, x_t_x_d = 0, x_t_y_d = 0, y_t_y = 0, y_t_y_d = 0, y_t_x_d = 0;
-    for(int i=0; i < n; i++){
+    for (int i = 0; i < n; i++)
+    {
         float x = obj[i].x, y = obj[i].y, x_d = scene[i].x, y_d = scene[i].y;
         x_avg += x;
         y_avg += y;
         x_d_avg += x_d;
         y_d_avg += y_d;
-        x_t_x += x*x;
-        y_t_y += y*y;
-        x_t_x_d += x*x_d;
-        x_t_y_d += x*y_d;
-        y_t_x_d += y*x_d;
-        y_t_y_d += y*y_d;
-    } 
+        x_t_x += x * x;
+        y_t_y += y * y;
+        x_t_x_d += x * x_d;
+        x_t_y_d += x * y_d;
+        y_t_x_d += y * x_d;
+        y_t_y_d += y * y_d;
+    }
     x_avg /= n;
     x_d_avg /= n;
     y_avg /= n;
     y_d_avg /= n;
-    a1 = ((x_t_x_d - n*x_avg*x_d_avg) + (y_t_y_d - n*y_avg*y_d_avg))/((x_t_x - n*x_avg*x_avg) + (y_t_y - n*y_avg*y_avg));
-    a2 = ((x_t_y_d - n*x_avg*y_d_avg) - (y_t_x_d - n*y_avg*x_d_avg))/((x_t_x - n*x_avg*x_avg) + (y_t_y - n*y_avg*y_avg));
-    a3 = x_d_avg - a1*x_avg + a2*y_avg;
-    a4 = y_d_avg - a2*x_avg - a1*y_avg;
-    mat_object[0] =  a1;
+    a1 = ((x_t_x_d - n * x_avg * x_d_avg) + (y_t_y_d - n * y_avg * y_d_avg)) / ((x_t_x - n * x_avg * x_avg) + (y_t_y - n * y_avg * y_avg));
+    a2 = ((x_t_y_d - n * x_avg * y_d_avg) - (y_t_x_d - n * y_avg * x_d_avg)) / ((x_t_x - n * x_avg * x_avg) + (y_t_y - n * y_avg * y_avg));
+    a3 = x_d_avg - a1 * x_avg + a2 * y_avg;
+    a4 = y_d_avg - a2 * x_avg - a1 * y_avg;
+    mat_object[0] = a1;
     mat_object[1] = -a2;
     mat_object[2] = a3;
     mat_object[3] = a2;
@@ -98,7 +100,7 @@ int main(int argc, char **argv)
     Mat img_1 = imread(template_filename, IMREAD_GRAYSCALE); // Read the file
 
     // bitwise_not ( img_1, img_1 );
-    
+
     if (!img_1.data)
     {
         std::cout << " --(!) Error reading template image " << std::endl;
@@ -166,80 +168,88 @@ int main(int argc, char **argv)
             // imshow("Good Matches", img_matches);
             // for( int i = 0; i < (int)good_matches.size(); i++ )
             // { printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
-            if(good_matches.size() > 6) {
+            if (good_matches.size() > 6)
+            {
                 //-- Localize the object
                 std::vector<Point2f> obj, transfor_obj;
                 std::vector<Point2f> scene;
 
-                for( int i = 0; i < good_matches.size(); i++ )
+                for (int i = 0; i < good_matches.size(); i++)
                 {
                     //-- Get the keypoints from the good matches
-                    obj.push_back( keypoints_1[ good_matches[i].queryIdx ].pt );
-                    scene.push_back( keypoints_2[ good_matches[i].trainIdx ].pt );
+                    obj.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+                    scene.push_back(keypoints_2[good_matches[i].trainIdx].pt);
                 }
 
-                Mat H = findHomography( obj, scene, CV_RANSAC );
+                Mat H = findHomography(obj, scene, CV_RANSAC);
 
                 std::cout << H << std::endl;
 
-                cv::perspectiveTransform( obj, transfor_obj, H);
+                cv::perspectiveTransform(obj, transfor_obj, H);
 
-                int n=0;
+                int n = 0;
                 std::vector<cv::DMatch> best_matches;
-                for(int i=0; i < obj.size(); i++){
+                for (int i = 0; i < obj.size(); i++)
+                {
                     float d = pow(scene[i].x - transfor_obj[i].x, 2) + pow(scene[i].y - transfor_obj[i].y, 2);
-                    if(d < 9){
+                    if (d < 9)
+                    {
                         n++;
                         best_matches.push_back(good_matches[i]);
                     }
                 }
 
-                if(n > 6){
+                if (n > 6)
+                {
                     drawMatches(img_1, keypoints_1, img_2, keypoints_2,
                                 best_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
                                 std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
                     obj.clear();
                     scene.clear();
-                    for( int i = 0; i < best_matches.size(); i++ )
+                    for (int i = 0; i < best_matches.size(); i++)
                     {
                         //-- Get the keypoints from the good matches
-                        obj.push_back( keypoints_1[ best_matches[i].queryIdx ].pt );
-                        scene.push_back( keypoints_2[ best_matches[i].trainIdx ].pt );
-                        printf( "-- Good Match [%d] template x: %f template y: %f -- scene x: %f scene y: %f  \n", 
-                                i, keypoints_1[ best_matches[i].queryIdx ].pt.x, keypoints_1[ best_matches[i].queryIdx ].pt.y, 
-                                keypoints_2[ best_matches[i].trainIdx ].pt.x, keypoints_2[ best_matches[i].trainIdx ].pt.y);
+                        obj.push_back(keypoints_1[best_matches[i].queryIdx].pt);
+                        scene.push_back(keypoints_2[best_matches[i].trainIdx].pt);
+                        printf("-- Good Match [%d] template x: %f template y: %f -- scene x: %f scene y: %f  \n",
+                               i, keypoints_1[best_matches[i].queryIdx].pt.x, keypoints_1[best_matches[i].queryIdx].pt.y,
+                               keypoints_2[best_matches[i].trainIdx].pt.x, keypoints_2[best_matches[i].trainIdx].pt.y);
                     }
 
-
                     float mat_object[9];
-                    findParams( obj, scene, mat_object );
+                    findParams(obj, scene, mat_object);
 
                     Mat H_1 = cv::Mat(3, 3, CV_32F, mat_object);
 
                     std::cout << H_1 << std::endl;
-                    
+
                     //-- Get the corners from the image_1 ( the object to be "detected" )
                     std::vector<Point2f> obj_corners(4);
-                    obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( img_1.cols, 0 );
-                    obj_corners[2] = cvPoint( img_1.cols, img_1.rows ); obj_corners[3] = cvPoint( 0, img_1.rows);
+                    obj_corners[0] = cvPoint(0, 0);
+                    obj_corners[1] = cvPoint(img_1.cols, 0);
+                    obj_corners[2] = cvPoint(img_1.cols, img_1.rows);
+                    obj_corners[3] = cvPoint(0, img_1.rows);
                     std::vector<Point2f> scene_corners(4);
 
-                    cv::perspectiveTransform( obj_corners, scene_corners, H_1);
+                    cv::perspectiveTransform(obj_corners, scene_corners, H_1);
 
                     //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-                    cv::line( img_matches, scene_corners[0] + Point2f( img_1.cols, 0), scene_corners[1] + Point2f( img_1.cols, 0), Scalar(0, 255, 0), 4 );
-                    cv::line( img_matches, scene_corners[1] + Point2f( img_1.cols, 0), scene_corners[2] + Point2f( img_1.cols, 0), Scalar( 0, 255, 0), 4 );
-                    cv::line( img_matches, scene_corners[2] + Point2f( img_1.cols, 0), scene_corners[3] + Point2f( img_1.cols, 0), Scalar( 0, 255, 0), 4 );
-                    cv::line( img_matches, scene_corners[3] + Point2f( img_1.cols, 0), scene_corners[0] + Point2f( img_1.cols, 0), Scalar( 0, 255, 0), 4 );
-                    cv::imshow( "Good Matches & Object detection", img_matches );
-                }else{
+                    cv::line(img_matches, scene_corners[0] + Point2f(img_1.cols, 0), scene_corners[1] + Point2f(img_1.cols, 0), Scalar(0, 255, 0), 4);
+                    cv::line(img_matches, scene_corners[1] + Point2f(img_1.cols, 0), scene_corners[2] + Point2f(img_1.cols, 0), Scalar(0, 255, 0), 4);
+                    cv::line(img_matches, scene_corners[2] + Point2f(img_1.cols, 0), scene_corners[3] + Point2f(img_1.cols, 0), Scalar(0, 255, 0), 4);
+                    cv::line(img_matches, scene_corners[3] + Point2f(img_1.cols, 0), scene_corners[0] + Point2f(img_1.cols, 0), Scalar(0, 255, 0), 4);
+                    cv::imshow("Good Matches & Object detection", img_matches);
+                }
+                else
+                {
                     cv::imshow("Good Matches & Object detection", img_2);
                 }
-            }else{
+            }
+            else
+            {
                 cv::imshow("Good Matches & Object detection", img_2);
             }
             //-- Show detected matches
-
         }
         catch (...)
         {
